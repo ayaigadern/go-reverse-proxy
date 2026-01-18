@@ -1,0 +1,10 @@
+{
+  "port": 8080,
+  "strategy": "round-robin",
+  "health_check_frequency": "15s",
+  "backends": [
+    "http://localhost:8082",
+    "http://localhost:8083",
+    "http://localhost:8084"
+  ]
+}
