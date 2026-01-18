@@ -13,6 +13,12 @@ type RoundRobin struct {
 	Pool *serverpool.ServerPool
 }
 
+func NewRoundRobin(pool *serverpool.ServerPool) *RoundRobin {
+	return &RoundRobin{
+		Pool: pool,
+	}
+}
+
 func (r *RoundRobin) AddBackend(b *backend.Backend) {
 	r.Pool.AddBackend(b)
 }
