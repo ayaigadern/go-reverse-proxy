@@ -14,9 +14,7 @@ type RoundRobin struct {
 }
 
 func NewRoundRobin(pool *serverpool.ServerPool) *RoundRobin {
-	return &RoundRobin{
-		Pool: pool,
-	}
+	return &RoundRobin{Pool: pool}
 }
 
 func (r *RoundRobin) AddBackend(b *backend.Backend) {
@@ -28,22 +26,18 @@ func (r *RoundRobin) SetBackendStatus(uri *url.URL, alive bool) {
 }
 
 func (r *RoundRobin) GetNextValidPeer() (*backend.Backend, error) {
-	r.Pool.Mu.RLock()
-	defer r.Pool.Mu.RUnlock()
-
 	n := len(r.Pool.Backends)
 	if n == 0 {
 		return nil, errors.New("no backends available")
 	}
 
-	start := atomic.AddUint64(&r.Pool.Current, 1)
-
+	// Try up to n backends to find one alive
 	for i := 0; i < n; i++ {
-		idx := int((start + uint64(i)) % uint64(n))
-		backend := r.Pool.Backends[idx]
+		idx := int(atomic.AddUint64(&r.Pool.Current, 1)-1) % n
+		b := r.Pool.Backends[idx]
 
-		if backend.IsAlive() {
-			return backend, nil
+		if b.IsAlive() {
+			return b, nil
 		}
 	}
 
