@@ -27,17 +27,18 @@ func (s *ServerPool) AddBackend(b *backend.Backend) {
 
 }
 
-func (s *ServerPool) RemoveBackend(rawURL string) {
+func (s *ServerPool) RemoveBackend(rawURL string) bool {
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
 
 	for idx, backend := range s.Backends {
 		if backend.URL.String() == rawURL {
 			s.Backends = append(s.Backends[:idx], s.Backends[idx+1:]...)
-			return
+			return true
 		}
 
 	}
+	return false
 }
 
 func (s *ServerPool) SetBackendStatus(uri *url.URL, alive bool) {

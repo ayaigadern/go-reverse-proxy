@@ -44,17 +44,30 @@ func (a *AdminServer) StatusHandler(w http.ResponseWriter, r *http.Request) {
 		CurrentConns int64  `json:"current_connections"`
 	}
 
-	status := make([]backendInfo, len(a.Pool.Backends))
-	for i, b := range a.Pool.Backends {
-		status[i] = backendInfo{
+	backends := make([]backendInfo, 0, len(a.Pool.Backends))
+	activeCount := 0
+
+	for _, b := range a.Pool.Backends {
+		info := backendInfo{
 			URL:          b.URL.String(),
 			Alive:        b.IsAlive(),
 			CurrentConns: b.GetConns(),
 		}
+		if info.Alive {
+			activeCount++
+		}
+		backends = append(backends, info)
+	}
+
+	resp := map[string]interface{}{
+		"total_backends":  len(a.Pool.Backends),
+		"active_backends": activeCount,
+		"backends":        backends,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	jsonResp, _ := json.MarshalIndent(resp, "", "  ")
+	w.Write(jsonResp)
 }
 
 // Delete and Add
@@ -87,6 +100,7 @@ func (a *AdminServer) AddBackendHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	a.Pool.AddBackend(b)
+	log.Printf("Backend %s ADDED\n", b.URL)
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -99,7 +113,11 @@ func (a *AdminServer) RemoveBackendHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-
-	a.Pool.RemoveBackend(payload.URL)
-	w.WriteHeader(http.StatusOK)
+	removed := a.Pool.RemoveBackend(payload.URL)
+	if removed {
+		log.Printf("Backend %s REMOVED\n", payload.URL)
+		w.WriteHeader(http.StatusOK)
+	} else {
+		http.Error(w, "backend not found", http.StatusNotFound)
+	}
 }

@@ -40,7 +40,12 @@ func (h *HealthChecker) Start() {
 
 // checkBackends pings each backend and updates its Alive status
 func (h *HealthChecker) checkBackends() {
-	for _, b := range h.Pool.Backends {
+	h.Pool.Mu.RLock()
+	backends := make([]*backend.Backend, len(h.Pool.Backends))
+	copy(backends, h.Pool.Backends)
+	h.Pool.Mu.RUnlock()
+
+	for _, b := range backends {
 		alive := h.pingBackend(b)
 		if b.IsAlive() != alive {
 			b.SetAlive(alive)
